@@ -23,10 +23,10 @@ This implementation builds a fully interactive ATM machine simulator using Java 
 Three hardcoded user profiles are available for testing:
 
 | Account Number | PIN  | Starting Balance |
-|----------------|------|-----------------|
-| 1001           | 1234 | $1,000.00       |
-| 1002           | 5678 | $750.00         |
-| 1003           | 9012 | $2,500.00       |
+|----------------|------|----------------|
+| 7456           | 3239 | $1,000,000.00      |
+| 2120           | 0329 | $7,500.00        |
+| 5409           | 6859 | $2,500.00      |
 
 ### Extra Feature
 

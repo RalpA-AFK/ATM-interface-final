@@ -1,21 +1,17 @@
+import java.util.ArrayList;
+
 public class AccountLogs {
-
-    private String transactionType;
-    private int amount;
-    private int balance;
-    private String StoredTransactionType;
-    private int storedAmount;
-    private int storedBalance;
-
-
-    public AccountLogs(String transactionType, int amount, int balance ){
-        this.transactionType = transactionType;
-        this.amount = amount;
-        this.balance = balance;
+    ArrayList<LogEntry> entries;
+    public AccountLogs(String transactionType, int amount, int balance) {
+        this.entries = new ArrayList<>();
+        LogEntry initialEntry = new LogEntry(transactionType, amount, balance);
+        this.entries.add(initialEntry);
     }
-    public transactionLog(String transactionType, int amount, int balance) {
-        this.transactionType = storedTransactionType;
-        this.amount = storedAmount;
-        this.balance = storedBalance;
+    public void recordTransaction(String transactionType, int amount, int balance){
+        LogEntry newEntry = new LogEntry(transactionType, amount, balance);
+        this.entries.add(newEntry);
+    }
+    public ArrayList<LogEntry> getEntries(){
+        return this.entries;
     }
 }
