@@ -1,5 +1,5 @@
+package atm;
 import java.util.ArrayList; 
-import java.util.Scanner;
 
 public class Main{
     public static ArrayList<AccountProfile> accounts = new ArrayList<>();

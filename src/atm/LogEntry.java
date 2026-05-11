@@ -1,3 +1,4 @@
+package atm;
 public class LogEntry{ 
     private String transactionType;
     private int amount;
