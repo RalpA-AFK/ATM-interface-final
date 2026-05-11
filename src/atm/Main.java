@@ -7,9 +7,9 @@ public class Main{
     public static boolean isLoggedIn = false;
 
     public static void main(String[] args){
-        accounts.add(new AccountProfile(7456, 3239, 1000000));
-        accounts.add(new AccountProfile(2120, 0329, 7500));
-        accounts.add(new AccountProfile(5409, 6859, 2500));
+        accounts.add(new AccountProfile(7456, "3239", 1000000));
+        accounts.add(new AccountProfile(2120, "0329", 7500));
+        accounts.add(new AccountProfile(5409, "6859", 2500));
         
         //launch JFrame
         new ATMFrame().setVisible(true);
