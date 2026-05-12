@@ -9,7 +9,7 @@ public class AccountProfile{
         this.accountNumber = accountNumber;
         this.pin = pin;
         this.balance = balance;
-        this.accountLogs = new AccountLogs("Initial", 0, balance);
+        this.accountLogs = new AccountLogs(accountNumber);
     }
     public void setBalance(int newBalance) {this.balance = newBalance;}
     public int getBalance() {return this.balance;}
@@ -20,12 +20,14 @@ public class AccountProfile{
     public void withdraw(int amount) {
         if (amount > 0 && amount <= this.balance) {
             this.balance -= amount;
-            accountLogs.recordTransaction("Withdrawal", amount, this.balance); 
+            Database.updateBalance(this.accountNumber, this.balance);
+            accountLogs.recordTransaction("Withdrawal", amount, this.balance);
         }
     }
     public void deposit(int amount) {
         if (amount > 0) {
             this.balance += amount;
+            Database.updateBalance(this.accountNumber, this.balance);
             accountLogs.recordTransaction("Deposit", amount, this.balance);
         }
     }

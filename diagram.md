@@ -3,30 +3,44 @@
 ```mermaid
 classDiagram
     class Main {
-        -ArrayList~AccountProfile~ accounts
-        -AccountProfile activeAccount
-        -boolean loggedIn
-        +login(int accountNumber, int pin)
+        +ArrayList~AccountProfile~ accounts
+        +AccountProfile activeAccount
+        +boolean isLoggedIn
+        +main(String[])
+        +login(int accountNumber, String pin) boolean
         +logout()
+    }
+
+    class Database {
+        -String DB_URL
+        +getConnection() Connection
+        +init()
+        +loadAllAccounts() List
+        +loadLogsFor(int) List
+        +updateBalance(int, int)
+        +insertLogEntry(int, String, int, int)
     }
 
     class AccountProfile {
         -int accountNumber
-        -int pin
+        -String pin
         -int balance
-        -AccountLogs logs
-        +AccountProfile(int, int, int)
+        -AccountLogs accountLogs
+        +AccountProfile(int, String, int)
         +getAccountNumber() int
-        +getPin() int
+        +getPin() String
         +getBalance() int
         +setBalance(int)
+        +getLogs() AccountLogs
         +withdraw(int)
         +deposit(int)
     }
 
     class AccountLogs {
+        -int accountNumber
         -ArrayList~LogEntry~ entries
-        +AccountLogs()
+        +AccountLogs(int)
+        +addLoadedEntry(LogEntry)
         +recordTransaction(String, int, int)
         +getEntries() ArrayList
     }
@@ -41,80 +55,132 @@ classDiagram
         +getBalance() int
     }
 
-    class WelcomePanel {
-        -JLabel atmImage
-        -JButton scanCardBtn
-        +WelcomePanel()
-        +initComponents()
+    class ScreenPanel {
+        #ATMFrame parent
+        +ScreenPanel(ATMFrame, String)
+        +onShow()
     }
 
     class ATMFrame {
-        -JPanel leftButtonBar
-        -JPanel rightButtonBar
-        -JPanel centerScreen
         -CardLayout screenLayout
-        +ATMFrame()
-        +setLeftButtons(String[], Runnable[])
-        +setRightButtons(String[], Runnable[])
+        -JPanel screenHost
+        -JButton[] digitButtons
+        -JButton[] leftButtons
+        -JButton[] rightButtons
+        +int pendingAccountNumber
+        +String pendingTransactionMode
+        +String lastTransactionType
+        +int lastTransactionAmount
+        +int lastTransactionBalance
+        +registerScreen(String, ScreenPanel)
         +showScreen(String)
+        +setNumpadHandlers(IntConsumer, Runnable, Runnable, Runnable)
+        +setLeftButtonActions(Runnable[])
+        +setRightButtonActions(Runnable[])
+    }
+
+    class WelcomePanel {
+        -JButton scanCardBtn
+        +WelcomePanel(ATMFrame)
     }
 
     class AccountNumberScreen {
-        -JLabel promptLabel
-        -JTextField inputDisplay
-        -JPanel numpad
-        +AccountNumberScreen()
-        +validateAccountNumber()
+        -StringBuilder input
+        -JLabel displayLabel
+        +AccountNumberScreen(ATMFrame)
+        +onShow()
     }
 
     class PINScreen {
-        -JLabel promptLabel
-        -JLabel pinDisplay
-        -JPanel numpad
-        +PINScreen()
-        +validatePIN()
+        -StringBuilder input
+        -JLabel displayLabel
+        +PINScreen(ATMFrame)
+        +onShow()
     }
 
     class MenuScreen {
-        -JLabel promptLabel
-        -String[] leftOptions
-        -String[] rightOptions
-        +MenuScreen()
-        +setOptions()
+        +MenuScreen(ATMFrame)
+        +onShow()
     }
 
     class TransactionScreen {
-        -JLabel promptLabel
-        -JPanel numpad
-        -boolean awaitingAmount
-        +TransactionScreen()
-        +showWithdraw()
-        +showDeposit()
-        +showHistory()
+        -String mode
+        -StringBuilder amountInput
+        +TransactionScreen(ATMFrame)
+        +onShow()
+    }
+
+    class HistoryScreen {
+        -JTextArea historyArea
+        +HistoryScreen(ATMFrame)
+        +onShow()
     }
 
     class ReceiptScreen {
-        -JLabel transactionType
-        -JLabel amount
-        -JLabel newBalance
-        -JButton continueBtn
-        +ReceiptScreen()
-        +displayReceipt(String, int, int)
+        -JLabel typeLabel
+        -JLabel amountLabel
+        -JLabel balanceLabel
+        +ReceiptScreen(ATMFrame)
+        +onShow()
     }
 
     Main "1" --> "many" AccountProfile : stores
     Main "1" --> "1" AccountProfile : activeAccount
-    Main --> ATMFrame : passes activeAccount
+    Main --> ATMFrame : launches
+    Main ..> Database : init() / loadAllAccounts()
     AccountProfile "1" --> "1" AccountLogs
+    AccountProfile ..> Database : updateBalance()
     AccountLogs "1" --> "many" LogEntry
-    WelcomePanel --> ATMFrame : transitions to
-    ATMFrame --> AccountNumberScreen : shows
-    ATMFrame --> PINScreen : shows
-    ATMFrame --> MenuScreen : shows
-    ATMFrame --> TransactionScreen : shows
-    TransactionScreen --> ReceiptScreen : transitions to
-    ReceiptScreen --> MenuScreen : continue
-    ReceiptScreen --> WelcomePanel : exit
+    AccountLogs ..> Database : insertLogEntry()
+    Database ..> AccountProfile : creates from rows
+    Database ..> LogEntry : creates from rows
+
+    ScreenPanel <|-- WelcomePanel
+    ScreenPanel <|-- AccountNumberScreen
+    ScreenPanel <|-- PINScreen
+    ScreenPanel <|-- MenuScreen
+    ScreenPanel <|-- TransactionScreen
+    ScreenPanel <|-- HistoryScreen
+    ScreenPanel <|-- ReceiptScreen
+
+    ATMFrame --> ScreenPanel : registers / shows
+    WelcomePanel --> AccountNumberScreen : Scan Card
+    AccountNumberScreen --> PINScreen : valid account
+    PINScreen --> MenuScreen : correct PIN
+    MenuScreen --> TransactionScreen : Withdraw / Deposit
+    MenuScreen --> HistoryScreen : View History
+    MenuScreen --> WelcomePanel : Logout
+    TransactionScreen --> ReceiptScreen : on success
+    ReceiptScreen --> MenuScreen : Yes (continue)
+    ReceiptScreen --> WelcomePanel : No (logout)
+    HistoryScreen --> MenuScreen : back
+```
+
+---
+
+# ATM Interface — Persistence Diagram
+
+```mermaid
+flowchart LR
+    subgraph App["Java Application (in-memory)"]
+        Main_[Main.accounts]
+        AP[AccountProfile<br/>accountNumber, pin, balance]
+        AL[AccountLogs<br/>entries List]
+    end
+
+    subgraph DB["SQLite (atm.db)"]
+        T1[(accounts table<br/>account_number PK<br/>pin<br/>balance)]
+        T2[(logs table<br/>id PK<br/>account_number FK<br/>transaction_type<br/>amount<br/>balance)]
+    end
+
+    Main_ -->|"Database.init()<br/>seeds 3 default accounts<br/>on first run"| T1
+    Main_ -->|"Database.init()<br/>seeds initial log<br/>on first run"| T2
+
+    T1 -->|"Database.loadAllAccounts()<br/>on every app launch"| AP
+    T2 -->|"Database.loadLogsFor()<br/>on every app launch"| AL
+
+    AP -->|"withdraw / deposit<br/>→ Database.updateBalance()"| T1
+    AL -->|"recordTransaction<br/>→ Database.insertLogEntry()"| T2
 ```
 
 ---
@@ -123,41 +189,43 @@ classDiagram
 
 ```mermaid
 flowchart TD
-    A([App Launches]) --> B[Welcome Screen\nATM Reference Image]
+    A([App Launches]) --> A2[Database.init<br/>creates tables, seeds if empty]
+    A2 --> A3[Load accounts + logs from DB]
+    A3 --> B[Welcome Screen<br/>ATM Reference Image]
     B --> C[User clicks Scan Card]
-    C --> D[ATM Interface Loads\nGrey + Blue Panel with Side Buttons]
+    C --> D[ATM Interface Loads<br/>Grey + Blue Panel with Side Buttons]
 
-    D --> E[Account Number Screen\nPrompt + Numpad]
-    E --> F{Account Number\nValid?}
+    D --> E[Account Number Screen<br/>Prompt + Numpad]
+    E --> F{Account Number<br/>Valid?}
     F -- No --> G[Show Error Message] --> E
-    F -- Yes --> H[PIN Screen\nPrompt + Masked Display + Numpad]
+    F -- Yes --> H[PIN Screen<br/>Prompt + Masked Display + Numpad]
 
-    H --> I{PIN\nCorrect?}
+    H --> I{PIN<br/>Correct?}
     I -- No --> J[Show Incorrect PIN] --> H
-    I -- Yes --> K[Menu Screen\nWhat would you like to do today?]
+    I -- Yes --> K[Menu Screen<br/>Withdraw / Deposit / History / Logout]
 
-    K --> L[Left Buttons:\nWithdraw\nDeposit]
-    K --> M[Right Buttons:\nTransaction History]
+    K --> L[Left Buttons:<br/>Withdraw / Deposit]
+    K --> M[Right Buttons:<br/>View History / Logout]
 
-    L -- Withdraw --> N[Withdraw Screen\nSelect Amount]
-    N --> O{Standard Amount\nor Other?}
-    O -- 20/40/60/80/100 --> P{Sufficient\nBalance?}
-    O -- Other --> Q[Enter Custom Amount\nMust be interval of 20] --> P
+    L -- Withdraw --> N[Withdraw Screen<br/>Select $20/$40/$60/$80/$100]
+    N --> P{Sufficient<br/>Balance?}
     P -- No --> R[Show Insufficient Funds] --> N
-    P -- Yes --> S[Show $2.25 Vendor Fee Warning\nProceed?]
+    P -- Yes --> S[Show $2 Vendor Fee Warning<br/>Proceed?]
     S -- No --> N
-    S -- Yes --> T[Process Withdrawal\nUpdate Balance + Log]
+    S -- Yes --> T[Process Withdrawal<br/>Update Balance + Log<br/>→ persist to DB]
 
-    L -- Deposit --> U[Deposit Screen\nEnter Amount via Numpad]
-    U --> V[Process Deposit\nUpdate Balance + Log]
+    L -- Deposit --> U[Deposit Screen<br/>Enter Amount via Numpad]
+    U --> V[Process Deposit<br/>Update Balance + Log<br/>→ persist to DB]
 
-    M -- Transaction History --> W[Show History Screen\nScrollable Log List]
+    M -- View History --> W[History Screen<br/>Scrollable Log List from DB]
     W --> X[Back to Menu] --> K
 
-    T --> Y[Receipt Screen\nTransaction Type + Amount + New Balance]
+    T --> Y[Receipt Screen<br/>====== RECEIPT ======<br/>Type / Amount / New Balance]
     V --> Y
 
-    Y --> Z{Continue?}
-    Z -- Yes --> K
-    Z -- No --> AA[Have a Good Day Screen] --> B
+    Y --> Z{Need anything<br/>else?}
+    Z -- Yes Menu --> K
+    Z -- No Logout --> B
+
+    M -- Logout --> B
 ```
