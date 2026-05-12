@@ -31,6 +31,7 @@ Three hardcoded user profiles are available for testing:
 ### Extra Feature
 
 **Transaction History** — a "View History" option on the main menu displays a timestamped log of all deposits, withdrawals, and balance checks performed during the session.
+**Persistent Data** — All transactions are saved to a local file-based database (e.g., SQLite) so that when the user logs out and logs back in, their transaction history and balance are preserved.
 
 ### Source Files
 
@@ -48,16 +49,7 @@ src/atm/
   HistoryPanel.java     - scrollable timestamped transaction log
 ```
 
-### How to Run
-
-```
-javac -d out src/atm/*.java
-java -cp out atm.ATMApp
-```
-
----
-
-## How to Submit
+## Submission 
 
 As before, you will make a walkthrough YouTube video where you describe what you worked on, the new feature(s) you implemented, and how the code runs.
 
